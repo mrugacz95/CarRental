@@ -1,0 +1,27 @@
+package cars.com;
+
+import cars.com.Car;
+
+rule "init"
+when
+then
+    CarCategory categoryA = new CarCategory(CarCategory.CATEGORY.A, 59, 69, 10, 10);
+    CarCategory categoryB = new CarCategory(CarCategory.CATEGORY.B, 69, 79, 10, 10);
+    CarCategory categoryD = new CarCategory(CarCategory.CATEGORY.D, 79, 89, 10, 10);
+    insert(new Car(categoryA));
+    insert(new Car(categoryA));
+    insert(new Car(categoryB));
+    insert(new Car(categoryD));
+    insert(new Car(categoryD));
+    //"prefernce", "isLoyaltyPartner", "wantBikeCarrier", "wantBabySupport", "rentalStart", "rentialPredictedDate"
+    insert(new Rental(null, true, true, true, "11/11/2016", "12/11/2016"));
+    insert(new Rental(CarCategory.CATEGORY.B, false, true, false, "10/11/2016", "13/11/2016"));
+    insert(new Rental(CarCategory.CATEGORY.B, false, true, false, "10/11/2016", "13/11/2016"));
+end
+rule "showAllCars"
+ when
+    rential : Rental()
+ then
+    System.out.println("rential" + rential.getRentalStart().toString());
+end
+
