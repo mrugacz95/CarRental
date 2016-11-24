@@ -2,7 +2,6 @@ package cars.com;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.Value;
 import org.joda.time.DateTime;
 
 import java.text.SimpleDateFormat;
@@ -14,27 +13,21 @@ import java.util.Date;
 @Getter
 @Setter
 public class Rental {
-    SimpleDateFormat simpleDateFormat= new SimpleDateFormat("dd/MM/yyyy");
     CarCategory.CATEGORY prefernce;
-    Boolean isLoyaltyPartner;
     Boolean wantBikeCarrier;
     Boolean wantBabySupport;
-    Date rentalStart;
-    Date rentalPredictedDate;
+    DateTime rentalStart;
+    DateTime rentalPredictedDate;
+    Client client;
+    Car car;
 
-    @java.beans.ConstructorProperties({"simpleDateFormat", "prefernce", "isLoyaltyPartner", "wantBikeCarrier", "wantBabySupport", "rentalStart", "rentialPredictedDate"})
-    public Rental(CarCategory.CATEGORY prefernce, Boolean isLoyaltyPartner, Boolean wantBikeCarrier, Boolean wantBabySupport, String rentalStart, String rentialPredictedDate) {
-        this.simpleDateFormat = simpleDateFormat;
+    @java.beans.ConstructorProperties({"prefernce", "wantBikeCarrier", "wantBabySupport", "rentalStart", "rentalPredictedDate", "client"})
+    public Rental(CarCategory.CATEGORY prefernce, Boolean wantBikeCarrier, Boolean wantBabySupport, String rentalStart, String rentalPredictedDate, Client client) {
         this.prefernce = prefernce;
-        this.isLoyaltyPartner = isLoyaltyPartner;
         this.wantBikeCarrier = wantBikeCarrier;
         this.wantBabySupport = wantBabySupport;
-        try {
-            this.rentalStart = simpleDateFormat.parse(rentalStart);
-            this.rentalPredictedDate = simpleDateFormat.parse(rentialPredictedDate);
-        }
-        catch (Exception e){
-
-        }
+            this.rentalStart = DateParser.parse(rentalStart);
+            this.rentalPredictedDate = DateParser.parse(rentalPredictedDate);
+        this.client = client;
     }
 }

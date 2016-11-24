@@ -1,6 +1,7 @@
 package cars.com;
 
-import cars.com.Car;
+import cars.com.Car
+import cars.com.CarCategory;
 
 rule "init"
 when
@@ -13,10 +14,20 @@ then
     insert(new Car(categoryB));
     insert(new Car(categoryD));
     insert(new Car(categoryD));
-    //"prefernce", "isLoyaltyPartner", "wantBikeCarrier", "wantBabySupport", "rentalStart", "rentialPredictedDate"
-    insert(new Rental(null, true, true, true, "11/11/2016", "12/11/2016"));
-    insert(new Rental(CarCategory.CATEGORY.B, false, true, false, "10/11/2016", "13/11/2016"));
-    insert(new Rental(CarCategory.CATEGORY.B, false, true, false, "10/11/2016", "13/11/2016"));
+    Client client1 = new Client(true);
+    Rental rental1 = new Rental(null, true, true, "11/11/2016", "12/11/2016", client1);
+    insert (rental1);
+    insert(new Return("12/11/2016", 66, rental1));
+    Client client2 = new Client(false);
+    Rental rental2 = new Rental(CarCategory.CATEGORY.B, true, false, "10/11/2016", "13/11/2016", client2);
+    Rental rental3 = new Rental(CarCategory.CATEGORY.A, null, false, "11/11/2016", "14/11/2016", client2);
+    insert(rental2);
+    insert(rental3);
+    insert(new Return("12/11/2016", 100, rental2));
+    Client client3 = new Client(false);
+    Rental rental4 = new Rental(CarCategory.CATEGORY.B, false, false, "11/11/2016", "16/11/2016", client3);
+    insert(rental4);
+    insert(new Return("18/11/2016", 1000, rental2,2,true));
 end
 rule "showAllCars"
  when
