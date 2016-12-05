@@ -1,7 +1,9 @@
 package cars.com;
+dialect "mvel"
 
 import cars.com.Car
-import cars.com.CarCategory;
+import cars.com.CarCategory
+import org.joda.time.Days;
 
 rule "init"
 when
@@ -14,25 +16,70 @@ then
     insert(new Car(categoryB));
     insert(new Car(categoryD));
     insert(new Car(categoryD));
-    Client client1 = new Client(true);
-    Rental rental1 = new Rental(null, true, true, "11/11/2016", "12/11/2016", client1);
-    insert (rental1);
-    insert(new Return("12/11/2016", 66, rental1));
-    Client client2 = new Client(false);
-    Rental rental2 = new Rental(CarCategory.CATEGORY.B, true, false, "10/11/2016", "13/11/2016", client2);
-    Rental rental3 = new Rental(CarCategory.CATEGORY.A, null, false, "11/11/2016", "14/11/2016", client2);
-    insert(rental2);
-    insert(rental3);
-    insert(new Return("12/11/2016", 100, rental2));
-    Client client3 = new Client(false);
-    Rental rental4 = new Rental(CarCategory.CATEGORY.B, false, false, "11/11/2016", "16/11/2016", client3);
-    insert(rental4);
-    insert(new Return("18/11/2016", 1000, rental2,2,true));
 end
-rule "showAllCars"
+
+rule "rent"
+salience(-rental.getRentalStart().getMillis())
  when
-    rential : Rental()
+    rental : Rental();
+    car : Car(available == true && carCategory.getCat() == rental.categoryPrefernce);
  then
-    System.out.println("rential" + rential.getRentalStart().toString());
+    car.setAvailable(false);
+    System.out.println("wyp " + rental);
+    System.out.println("car: kat:" + car.carCategory +" id:"+ String.valueOf(car.getId())+"\n");
+    car.addRental(rental);
+    rental.setCar(car);
+    retract(rental);
+end
+rule "changePreferencesAB"
+salience(-rental.getRentalStart().getMillis()+1)
+when
+    rental : Rental(categoryPrefernce == CarCategory.CATEGORY.A);
+ then
+    System.out.println("no car A");
+    modify(rental){ categoryPrefernce = CarCategory.CATEGORY.B}
+end
+
+rule "changePreferencesBD"
+salience(-rental.getRentalStart().getMillis()+1)
+when
+    rental : Rental(categoryPrefernce == CarCategory.CATEGORY.B);
+ then
+   System.out.println("no car B");
+   modify(rental){ categoryPrefernce = CarCategory.CATEGORY.D}
+end
+rule "changePreferencesDNull"
+salience(-rental.getRentalStart().getMillis()+1)
+when
+    rental : Rental(categoryPrefernce == CarCategory.CATEGORY.A);
+ then
+    System.out.println("no car D");
+    modify(rental){ categoryPrefernce = null}
+end
+rule "noCars"
+salience(-rental.getRentalStart().getMillis()+1)
+when
+    rental : Rental(categoryPrefernce == null)
+   then
+    System.out.println("no car");
+    retract(rental)
+end
+
+
+rule "ret"
+salience(-ret.getRentalEnd().getMillis())
+ when
+    ret : Return(rental.getCar() != null);
+ then
+    System.out.println("zwrot " + ret);
+    System.out.println(ret.getRental().getCar().toString());
+    Client client = ret.getRental().getClient();
+    client.addPayment(ret.kilometersDriven);
+    client.addPayment(ret.getRental().getWantBabyCarrier() ? ret.getRental().getCar().getCarCategory().getBabyCarrierPrice() : 0);
+    client.addPayment(ret.getRental().getWantBikeSupport() ? ret.getRental().getCar().getCarCategory().getBikeSupportPrice() : 0);
+    client.addPayment(ret.getLostBusbyCount() * 20);
+    client.addPayment(ret.getLackOfRegistrationCertificate()? 500 : 0);
+    client.addPayment(Days.daysBetween(ret.getRentalEnd(),ret.getRental().getRentalPredictedDate()).getDays());
+    retract(ret);
 end
 
