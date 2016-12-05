@@ -20,7 +20,7 @@ public class CarRental {
 
             Client client2 = new Client(false);
             Rental rental2 = new Rental(CarCategory.CATEGORY.B, true, false, "10/11/2016", "13/11/2016", client2);
-            Rental rental3 = new Rental(CarCategory.CATEGORY.A, null, false, "11/11/2016", "14/11/2016", client2);
+            Rental rental3 = new Rental(CarCategory.CATEGORY.A, false, false, "11/11/2016", "14/11/2016", client2);
 
             session.insert(rental2);
             session.fireAllRules();

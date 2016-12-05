@@ -8,78 +8,96 @@ import org.joda.time.Days;
 rule "init"
 when
 then
-    CarCategory categoryA = new CarCategory(CarCategory.CATEGORY.A, 59, 69, 10, 10);
-    CarCategory categoryB = new CarCategory(CarCategory.CATEGORY.B, 69, 79, 10, 10);
-    CarCategory categoryD = new CarCategory(CarCategory.CATEGORY.D, 79, 89, 10, 10);
-    insert(new Car(categoryA));
-    insert(new Car(categoryA));
-    insert(new Car(categoryB));
-    insert(new Car(categoryD));
-    insert(new Car(categoryD));
+    insert(new Car(CarCategory.CATEGORY.A));
+    insert(new Car(CarCategory.CATEGORY.A));
+    insert(new Car(CarCategory.CATEGORY.B));
+    insert(new Car(CarCategory.CATEGORY.D));
+    insert(new Car(CarCategory.CATEGORY.D));
 end
-
+rule "set_preference"
+salience(-rental.getRentalStart().getMillis()+1)
+    when
+    rental : Rental(categoryPrefernce == null);
+    then
+    modify(rental){ categoryPrefernce=CarCategory.CATEGORY.A,categoryGot=CarCategory.CATEGORY.A}
+end
 rule "rent"
 salience(-rental.getRentalStart().getMillis())
  when
-    rental : Rental();
-    car : Car(available == true && carCategory.getCat() == rental.categoryPrefernce);
+    rental : Rental(client.getCar() == null);
+    car : Car(available && carCategory == rental.categoryGot);
  then
     car.setAvailable(false);
+    System.out.print("found car" + String.valueOf(-rental.getRentalStart().getMillis()));
     System.out.println("wyp " + rental);
     System.out.println("car: kat:" + car.carCategory +" id:"+ String.valueOf(car.getId())+"\n");
     car.addRental(rental);
-    rental.setCar(car);
+    rental.getClient().setCar(car);
     retract(rental);
 end
 rule "changePreferencesAB"
-salience(-rental.getRentalStart().getMillis()+1)
+salience((-rental.getRentalStart().getMillis())-1)
 when
-    rental : Rental(categoryPrefernce == CarCategory.CATEGORY.A);
+    rental : Rental(categoryGot == CarCategory.CATEGORY.A  && client.getCar()==null);
  then
     System.out.println("no car A");
-    modify(rental){ categoryPrefernce = CarCategory.CATEGORY.B}
+    modify(rental){ categoryGot = CarCategory.CATEGORY.B}
 end
 
 rule "changePreferencesBD"
-salience(-rental.getRentalStart().getMillis()+1)
+salience((-rental.getRentalStart().getMillis())-1)
 when
-    rental : Rental(categoryPrefernce == CarCategory.CATEGORY.B);
+    rental : Rental(categoryGot == CarCategory.CATEGORY.B && client.getCar()==null);
  then
-   System.out.println("no car B");
-   modify(rental){ categoryPrefernce = CarCategory.CATEGORY.D}
+   System.out.println("no car B " + String.valueOf((-rental.getRentalStart().getMillis())-1));
+   modify(rental){categoryGot = CarCategory.CATEGORY.D}
 end
 rule "changePreferencesDNull"
-salience(-rental.getRentalStart().getMillis()+1)
+salience((-rental.getRentalStart().getMillis())-1)
 when
-    rental : Rental(categoryPrefernce == CarCategory.CATEGORY.A);
+    rental : Rental(categoryGot == CarCategory.CATEGORY.A && client.getCar()==null);
  then
     System.out.println("no car D");
-    modify(rental){ categoryPrefernce = null}
+    modify(rental){categoryGot = null}
 end
 rule "noCars"
-salience(-rental.getRentalStart().getMillis()+1)
+salience((-rental.getRentalStart().getMillis())-1)
 when
-    rental : Rental(categoryPrefernce == null)
+    rental : Rental(categoryPrefernce == null || client.car!=null)
    then
-    System.out.println("no car");
+    System.out.println("No car found or client has car already! " + rental.getClient());
     retract(rental)
 end
 
 
-rule "ret"
+rule "return"
 salience(-ret.getRentalEnd().getMillis())
  when
-    ret : Return(rental.getCar() != null);
+    ret : Return(rental.getClient().getCar() != null);
  then
     System.out.println("zwrot " + ret);
-    System.out.println(ret.getRental().getCar().toString());
+    System.out.println(ret.getRental().getClient().getCar().toString());
     Client client = ret.getRental().getClient();
-    client.addPayment(ret.kilometersDriven);
-    client.addPayment(ret.getRental().getWantBabyCarrier() ? ret.getRental().getCar().getCarCategory().getBabyCarrierPrice() : 0);
-    client.addPayment(ret.getRental().getWantBikeSupport() ? ret.getRental().getCar().getCarCategory().getBikeSupportPrice() : 0);
+    System.out.println("client: " + client);
+    int days = Days.daysBetween(ret.getRental().getRentalStart(),ret.getRentalEnd()).getDays();
+    client.addPayment((int)Math.ceil(ret.getKilometersDriven()*(days>3?1.5f:1f)));
+    client.addPayment(days*(( days > 3 )?ret.getRental().getCategoryPrefernce().priceOver3Days:ret.getRental().getCategoryPrefernce().priceBelow3Days));
+    client.addPayment(ret.getRental().getWantBabyCarrier() ? ret.getRental().getCategoryGot().babyCarrierPrice : 0);
+    client.addPayment(ret.getRental().getWantBikeSupport() ? ret.getRental().getCategoryGot().bikeSupportPrice : 0);
     client.addPayment(ret.getLostBusbyCount() * 20);
     client.addPayment(ret.getLackOfRegistrationCertificate()? 500 : 0);
     client.addPayment(Days.daysBetween(ret.getRentalEnd(),ret.getRental().getRentalPredictedDate()).getDays());
+    if(ret.getRental().getWantBabyCarrier() || ret.getRental().getWantBikeSupport()){
+        if(ret.getRental().getWantBabyCarrier())
+            client.addPayment(-ret.getRental().getCategoryPrefernce().babyCarrierPrice);
+        else if(ret.getRental().getWantBikeSupport())
+            client.addPayment(-ret.getRental().getCategoryPrefernce().bikeSupportPrice);
+        else
+            client.addPayment(-Math.max(ret.getRental().getCategoryPrefernce().babyCarrierPrice,ret.getRental().getCategoryPrefernce().bikeSupportPrice));
+    }
+    ret.getRental().setRentalEnd(ret.getRentalEnd());
+    ret.getRental().getClient().getCar().setAvailable(true);
+    client.setCar(null);
     retract(ret);
 end
 

@@ -17,6 +17,7 @@ public class Client {
     Integer id;
     Integer bill = 0;
     Boolean isLoyaltyPartner;
+    Car car;
 
     public Client(Boolean isLoyaltyPartner) {
         clientsCount++;
@@ -28,6 +29,6 @@ public class Client {
     }
     @Override
     public String toString(){
-        return String.valueOf(id);
+        return "clientId="+String.valueOf(id) + ", car "+((car==null)?null:car.getId());
     }
 }

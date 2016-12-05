@@ -1,19 +1,19 @@
 package cars.com;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Value;
-
 /**
  * Created by mruga on 24.11.2016.
  */
-@AllArgsConstructor
-@Data
 public class CarCategory {
-    public enum CATEGORY {A,B,D};
-    CATEGORY cat;
-    Integer priceBelow3Days;
-    Integer priceOver3Days;
-    Integer babyCarrierPrice;
-    Integer BikeSupportPrice;
+    public enum CATEGORY {A(59,69,10,10),B(69,79,10,10),D(79,89,10,10);
+        public Integer priceBelow3Days;
+        public Integer priceOver3Days;
+        public Integer babyCarrierPrice;
+        public Integer bikeSupportPrice;
+        CATEGORY(Integer priceBelow3Days, Integer priceOver3Days, Integer babyCarrierPrice, Integer bikeSupportPrice) {
+            this.priceBelow3Days = priceBelow3Days;
+            this.priceOver3Days = priceOver3Days;
+            this.babyCarrierPrice = babyCarrierPrice;
+            this.bikeSupportPrice = bikeSupportPrice;
+        }
+    };
 }
