@@ -18,6 +18,7 @@ public class Rental {
     DateTime rentalStart;
     DateTime rentalPredictedDate;
     DateTime rentalEnd = null;
+    Boolean gotDiscount = false;
 
     @java.beans.ConstructorProperties({"categoryPrefernce", "wantBikeSupport", "wantBabyCarrier", "rentalStart", "rentalPredictedDate", "client"})
     public Rental(CarCategory.CATEGORY prefernce, Boolean wantBikeCarrier, Boolean wantBabySupport, String rentalStart, String rentalPredictedDate, Client client) {

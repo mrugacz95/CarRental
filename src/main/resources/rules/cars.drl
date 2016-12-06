@@ -78,53 +78,95 @@ when
 end
 
 
+rule "babyCarier"
+no-loop
+ when
+    ret : Return(rental.wantBabyCarrier);
+ then
+    payment = ret.getRental().getCategoryGot().babyCarrierPrice ;
+    ret.getRental().getClient().addPayment(payment);
+    System.out.println(" + "+payment+" za fotelik");
+  end
+rule "bikeSupport"
+no-loop
+when
+    ret : Return(rental.wantBikeSupport);
+   then
+    payment= ret.getRental().getCategoryGot().bikeSupportPrice;
+    ret.getRental().getClient().addPayment(payment);
+    System.out.println(" + " +payment+" za bagażnik");
+  end
+rule "getDiscount"
+ when
+    ret : Return(rental.client.isLoyaltyPartner && !rental.gotDiscount);
+ then
+    ret.getRental().getClient().addPayment(-10);
+    System.out.println(" - 10 za prog lojalnościowy");
+ end
+rule "over3Days"
+when
+    ret : Return(Days.daysBetween(rental.getRentalStart(),ret.rental.getRentalPredictedDate()).getDays()+1 <= 3);
+then
+    int payment = ret.getKilometersDriven();
+    ret.getRental().getClient().addPayment(payment);
+    System.out.println(" + " +payment+" za km");
+ end
+
+rule "below3Days"
+when
+    ret : Return(Days.daysBetween(rental.getRentalStart(),ret.rental.getRentalPredictedDate()).getDays()+1 > 3);
+then
+
+    int payment = (int)Math.ceil(ret.getKilometersDriven() * 0.5f );
+    ret.getRental().getClient().addPayment(payment);
+    System.out.println(" + " +payment+" za km");
+ end
+rule "days"
+when
+ret : Return()
+then
+    int days = Days.daysBetween(ret.getRental().getRentalStart(),ret.getRental().getRentalPredictedDate()).getDays()+1;
+    int oneDayCost =( days > 3 )?ret.getRental().getCategoryPrefernce().priceOver3Days:ret.getRental().getCategoryPrefernce().priceBelow3Days;
+    int payment= days*oneDayCost;
+    ret.getRental().getClient().addPayment(payment);
+    System.out.println(" + " +payment+" za dni(" + days +"*" +oneDayCost+")");
+ end
+ rule "daysLate"
+ when
+ ret : Return(Days.daysBetween(rental.getRentalPredictedDate(),rentalEnd).getDays()>0)
+ then
+    int days = Days.daysBetween(ret.getRental().getRentalStart(),ret.getRental().getRentalPredictedDate()).getDays()+1;
+    int oneDayCost =( days > 3 )?ret.getRental().getCategoryPrefernce().priceOver3Days:ret.getRental().getCategoryPrefernce().priceBelow3Days;
+    daysLate = Days.daysBetween(ret.getRental().getRentalPredictedDate(),ret.getRentalEnd()).getDays();
+    int payment=daysLate*3*oneDayCost;
+    ret.getRental().getClient().addPayment(payment);
+    System.out.println(" + " +payment+" za opóźnienie ("+daysLate+" dni)");
+  end
+
+   rule "lostBusby"
+   when
+   ret : Return(lostBusbyCount > 0)
+   then
+    payment= ret.getLostBusbyCount() * 20;
+    ret.getRental().getClient().addPayment(payment);
+    if(ret.getLostBusbyCount()>0) System.out.print(" + " +payment+" za kołpaki (il: "+ret.getLostBusbyCount()+")");
+    end
+
+   rule "lackOfRegistrationCertificate"
+   when
+   ret : Return(lackOfRegistrationCertificate)
+   then
+    payment= ret.getLackOfRegistrationCertificate()? 500 : 0;
+    ret.getRental().getClient().addPayment(payment);
+    if(ret.getLackOfRegistrationCertificate()) System.out.print(" + " +payment+" za dowód");
+    end
 rule "return"
-salience(-ret.getRentalEnd().getMillis())
+salience(-ret.getRentalEnd().getMillis()-1)
  when
     ret : Return(rental.getClient().getCar() != null);
  then
     System.out.print("zwrot samochodu " + ret.getRental().getClient().getCar().getCarCategory() + " od klienta " + ret.getRental().getClient().getId() +":");
     Client client = ret.getRental().getClient();
-    int days = Days.daysBetween(ret.getRental().getRentalStart(),ret.getRental().getRentalPredictedDate()).getDays()+1;
-    int payment = (int)Math.ceil(ret.getKilometersDriven()*(days>3?0.5f:1f));
-    client.addPayment(payment);
-    System.out.print(" + " +payment+" za km");
-    int oneDayCost =( days > 3 )?ret.getRental().getCategoryPrefernce().priceOver3Days:ret.getRental().getCategoryPrefernce().priceBelow3Days;
-    payment= days*oneDayCost;
-    client.addPayment(payment);
-    System.out.print(" + " +payment+" za dni(" + days +"*" +oneDayCost+")");
-
-    payment = ret.getRental().getWantBabyCarrier() ? ret.getRental().getCategoryGot().babyCarrierPrice : 0;
-    client.addPayment(payment);
-    System.out.print(" + " +payment+" za fotelik");
-
-    payment=ret.getRental().getWantBikeSupport() ? ret.getRental().getCategoryGot().bikeSupportPrice : 0;
-    client.addPayment(payment);
-    System.out.print(" + " +payment+" za bagażnik");
-
-    payment= ret.getLostBusbyCount() * 20;
-    client.addPayment(payment);
-    if(ret.getLostBusbyCount()>0) System.out.print(" + " +payment+" za kołpaki (il: "+ret.getLostBusbyCount()+")");
-
-    payment= ret.getLackOfRegistrationCertificate()? 500 : 0;
-    client.addPayment(payment);
-    if(ret.getLackOfRegistrationCertificate()) System.out.print(" + " +payment+" za dowód");
-
-    if((ret.getRental().getWantBabyCarrier() || ret.getRental().getWantBikeSupport()) && (ret.getRental().getClient().getIsLoyaltyPartner())){
-        System.out.print(" - 10 za prog lojalnościowy");
-        if(ret.getRental().getWantBabyCarrier())
-            client.addPayment(-ret.getRental().getCategoryPrefernce().babyCarrierPrice);
-        else if(ret.getRental().getWantBikeSupport())
-            client.addPayment(-ret.getRental().getCategoryPrefernce().bikeSupportPrice);
-        else
-            client.addPayment(-Math.max(ret.getRental().getCategoryPrefernce().babyCarrierPrice,ret.getRental().getCategoryPrefernce().bikeSupportPrice));
-    }
-
-    daysLate = Days.daysBetween(ret.getRental().getRentalPredictedDate(),ret.getRentalEnd()).getDays();
-    payment=daysLate*3*oneDayCost;
-    client.addPayment(payment);
-    System.out.print(" + " +payment+" za opóźnienie ("+daysLate+" dni)");
-
     ret.getRental().setRentalEnd(ret.getRentalEnd());
     ret.getRental().getClient().getCar().setAvailable(true);
     client.setCar(null);
