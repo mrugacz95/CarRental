@@ -13,15 +13,13 @@ import java.util.List;
 @Getter
 @Setter
 public class Client {
-    private static Integer clientsCount = 0;
     Integer id;
     Integer bill = 0;
     Boolean isLoyaltyPartner;
     Car car;
 
-    public Client(Boolean isLoyaltyPartner) {
-        clientsCount++;
-        id = clientsCount;
+    public Client(Boolean isLoyaltyPartner, int id) {
+        this.id = id;
         this.isLoyaltyPartner = isLoyaltyPartner;
     }
     public void addPayment(Integer amount){

@@ -19,6 +19,7 @@ salience(-rental.getRentalStart().getMillis()+1)
     when
     rental : Rental(categoryPrefernce == null);
     then
+    System.out.println("Ustalamy preferencję na A klientowi: "+rental.getClient().getId());
     modify(rental){ categoryPrefernce=CarCategory.CATEGORY.A,categoryGot=CarCategory.CATEGORY.A}
 end
 rule "rent"
@@ -28,9 +29,7 @@ salience(-rental.getRentalStart().getMillis())
     car : Car(available && carCategory == rental.categoryGot);
  then
     car.setAvailable(false);
-    System.out.print("found car" + String.valueOf(-rental.getRentalStart().getMillis()));
-    System.out.println("wyp " + rental);
-    System.out.println("car: kat:" + car.carCategory +" id:"+ String.valueOf(car.getId())+"\n");
+    System.out.println("Wypozyczammy samochód: "+ car.carCategory + " klientowi: "+ rental.getClient().getId());
     car.addRental(rental);
     rental.getClient().setCar(car);
     retract(rental);
@@ -40,7 +39,7 @@ salience((-rental.getRentalStart().getMillis())-1)
 when
     rental : Rental(categoryGot == CarCategory.CATEGORY.A  && client.getCar()==null);
  then
-    System.out.println("no car A");
+    System.out.println("Brak samochodu kat A");
     modify(rental){ categoryGot = CarCategory.CATEGORY.B}
 end
 
@@ -49,7 +48,7 @@ salience((-rental.getRentalStart().getMillis())-1)
 when
     rental : Rental(categoryGot == CarCategory.CATEGORY.B && client.getCar()==null);
  then
-   System.out.println("no car B " + String.valueOf((-rental.getRentalStart().getMillis())-1));
+   System.out.println("Brak samochodu kat B");
    modify(rental){categoryGot = CarCategory.CATEGORY.D}
 end
 rule "changePreferencesDNull"
@@ -57,15 +56,24 @@ salience((-rental.getRentalStart().getMillis())-1)
 when
     rental : Rental(categoryGot == CarCategory.CATEGORY.A && client.getCar()==null);
  then
-    System.out.println("no car D");
+    System.out.println("Brak samochodu kat D");
     modify(rental){categoryGot = null}
 end
 rule "noCars"
 salience((-rental.getRentalStart().getMillis())-1)
 when
-    rental : Rental(categoryPrefernce == null || client.car!=null)
+    rental : Rental(categoryGot == null)
    then
-    System.out.println("No car found or client has car already! " + rental.getClient());
+    System.out.println("Brak wybranego samochodu kat "+ rental.getCategoryGot() +" w wypozyczalni");
+    retract(rental)
+end
+
+rule "hasCar"
+salience((-rental.getRentalStart().getMillis())+1)
+when
+    rental : Rental(client.car!=null)
+   then
+    System.out.println("Klient już wypożyczył samochód");
     retract(rental)
 end
 
@@ -75,19 +83,35 @@ salience(-ret.getRentalEnd().getMillis())
  when
     ret : Return(rental.getClient().getCar() != null);
  then
-    System.out.println("zwrot " + ret);
-    System.out.println(ret.getRental().getClient().getCar().toString());
+    System.out.print("zwrot samochodu " + ret.getRental().getClient().getCar().getCarCategory() + " od klienta " + ret.getRental().getClient().getId() +":");
     Client client = ret.getRental().getClient();
-    System.out.println("client: " + client);
-    int days = Days.daysBetween(ret.getRental().getRentalStart(),ret.getRentalEnd()).getDays();
-    client.addPayment((int)Math.ceil(ret.getKilometersDriven()*(days>3?1.5f:1f)));
-    client.addPayment(days*(( days > 3 )?ret.getRental().getCategoryPrefernce().priceOver3Days:ret.getRental().getCategoryPrefernce().priceBelow3Days));
-    client.addPayment(ret.getRental().getWantBabyCarrier() ? ret.getRental().getCategoryGot().babyCarrierPrice : 0);
-    client.addPayment(ret.getRental().getWantBikeSupport() ? ret.getRental().getCategoryGot().bikeSupportPrice : 0);
-    client.addPayment(ret.getLostBusbyCount() * 20);
-    client.addPayment(ret.getLackOfRegistrationCertificate()? 500 : 0);
-    client.addPayment(Days.daysBetween(ret.getRentalEnd(),ret.getRental().getRentalPredictedDate()).getDays());
-    if(ret.getRental().getWantBabyCarrier() || ret.getRental().getWantBikeSupport()){
+    int days = Days.daysBetween(ret.getRental().getRentalStart(),ret.getRental().getRentalPredictedDate()).getDays()+1;
+    int payment = (int)Math.ceil(ret.getKilometersDriven()*(days>3?0.5f:1f));
+    client.addPayment(payment);
+    System.out.print(" + " +payment+" za km");
+    int oneDayCost =( days > 3 )?ret.getRental().getCategoryPrefernce().priceOver3Days:ret.getRental().getCategoryPrefernce().priceBelow3Days;
+    payment= days*oneDayCost;
+    client.addPayment(payment);
+    System.out.print(" + " +payment+" za dni(" + days +"*" +oneDayCost+")");
+
+    payment = ret.getRental().getWantBabyCarrier() ? ret.getRental().getCategoryGot().babyCarrierPrice : 0;
+    client.addPayment(payment);
+    System.out.print(" + " +payment+" za fotelik");
+
+    payment=ret.getRental().getWantBikeSupport() ? ret.getRental().getCategoryGot().bikeSupportPrice : 0;
+    client.addPayment(payment);
+    System.out.print(" + " +payment+" za bagażnik");
+
+    payment= ret.getLostBusbyCount() * 20;
+    client.addPayment(payment);
+    if(ret.getLostBusbyCount()>0) System.out.print(" + " +payment+" za kołpaki (il: "+ret.getLostBusbyCount()+")");
+
+    payment= ret.getLackOfRegistrationCertificate()? 500 : 0;
+    client.addPayment(payment);
+    if(ret.getLackOfRegistrationCertificate()) System.out.print(" + " +payment+" za dowód");
+
+    if((ret.getRental().getWantBabyCarrier() || ret.getRental().getWantBikeSupport()) && (ret.getRental().getClient().getIsLoyaltyPartner())){
+        System.out.print(" - 10 za prog lojalnościowy");
         if(ret.getRental().getWantBabyCarrier())
             client.addPayment(-ret.getRental().getCategoryPrefernce().babyCarrierPrice);
         else if(ret.getRental().getWantBikeSupport())
@@ -95,9 +119,16 @@ salience(-ret.getRentalEnd().getMillis())
         else
             client.addPayment(-Math.max(ret.getRental().getCategoryPrefernce().babyCarrierPrice,ret.getRental().getCategoryPrefernce().bikeSupportPrice));
     }
+
+    daysLate = Days.daysBetween(ret.getRental().getRentalPredictedDate(),ret.getRentalEnd()).getDays();
+    payment=daysLate*3*oneDayCost;
+    client.addPayment(payment);
+    System.out.print(" + " +payment+" za opóźnienie ("+daysLate+" dni)");
+
     ret.getRental().setRentalEnd(ret.getRentalEnd());
     ret.getRental().getClient().getCar().setAvailable(true);
     client.setCar(null);
+    System.out.println(" = rachunek klienta:" + client.getBill());
     retract(ret);
 end
 

@@ -9,9 +9,9 @@ public class CarCategory {
         public Integer priceOver3Days;
         public Integer babyCarrierPrice;
         public Integer bikeSupportPrice;
-        CATEGORY(Integer priceBelow3Days, Integer priceOver3Days, Integer babyCarrierPrice, Integer bikeSupportPrice) {
-            this.priceBelow3Days = priceBelow3Days;
+        CATEGORY(Integer priceOver3Days, Integer priceBelow3Days, Integer babyCarrierPrice, Integer bikeSupportPrice) {
             this.priceOver3Days = priceOver3Days;
+            this.priceBelow3Days = priceBelow3Days;
             this.babyCarrierPrice = babyCarrierPrice;
             this.bikeSupportPrice = bikeSupportPrice;
         }
