@@ -80,7 +80,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.2.1</version>
                 <configuration>
-                    <mainClass>cars.com.CarRental</mainClass>
+                    <mainClass>cars.com.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>
